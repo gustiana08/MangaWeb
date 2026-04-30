@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import MangaCard from "../components/MangaCard";
-import { GENRES } from "../data/genres";
+import { DAYS, GENRES } from "../data/genres";
 import { MANGA } from "../data/manga";
 
 const SORTS = [
@@ -24,27 +24,49 @@ const STATUSES = [
   { value: "completed", label: "Tamat" },
 ];
 
+const DAY_MAP = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+const FILTER_DEFAULTS = {
+  q: "",
+  genre: "all",
+  type: "all",
+  status: "all",
+  sort: "popular",
+  day: "all",
+};
+
+function resolveDay(raw) {
+  if (!raw) return "all";
+  if (raw === "daily" || raw === "today") return DAY_MAP[new Date().getDay()];
+  return raw;
+}
+
 export default function Catalog() {
   const [params, setParams] = useSearchParams();
-  const initialQ = params.get("q") || "";
-  const initialGenre = params.get("genre") || "all";
-  const initialType = params.get("type") || "all";
-  const initialSort = params.get("sort") || "popular";
 
-  const [q, setQ] = useState(initialQ);
-  const [genre, setGenre] = useState(initialGenre);
-  const [type, setType] = useState(initialType);
-  const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState(initialSort);
+  const q = params.get("q") || FILTER_DEFAULTS.q;
+  const genre = params.get("genre") || FILTER_DEFAULTS.genre;
+  const type = params.get("type") || FILTER_DEFAULTS.type;
+  const status = params.get("status") || FILTER_DEFAULTS.status;
+  const sort = params.get("sort") || FILTER_DEFAULTS.sort;
+  const day = resolveDay(params.get("day"));
 
-  useEffect(() => {
-    const next = new URLSearchParams();
-    if (q) next.set("q", q);
-    if (genre && genre !== "all") next.set("genre", genre);
-    if (type && type !== "all") next.set("type", type);
-    if (sort && sort !== "popular") next.set("sort", sort);
+  const setParam = (key, value) => {
+    const next = new URLSearchParams(params);
+    if (!value || value === FILTER_DEFAULTS[key]) {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
     setParams(next, { replace: true });
-  }, [q, genre, type, sort, setParams]);
+  };
+
+  const setQ = (v) => setParam("q", v);
+  const setGenre = (v) => setParam("genre", v);
+  const setType = (v) => setParam("type", v);
+  const setStatus = (v) => setParam("status", v);
+  const setSort = (v) => setParam("sort", v);
+  const setDay = (v) => setParam("day", v);
 
   const filtered = useMemo(() => {
     let list = [...MANGA];
@@ -61,6 +83,7 @@ export default function Catalog() {
     if (genre !== "all") list = list.filter((m) => m.genres.includes(genre));
     if (type !== "all") list = list.filter((m) => m.type === type);
     if (status !== "all") list = list.filter((m) => m.status === status);
+    if (day !== "all") list = list.filter((m) => m.day === day);
 
     switch (sort) {
       case "rating":
@@ -81,15 +104,20 @@ export default function Catalog() {
         break;
     }
     return list;
-  }, [q, genre, type, status, sort]);
+  }, [q, genre, type, status, sort, day]);
 
-  const reset = () => {
-    setQ("");
-    setGenre("all");
-    setType("all");
-    setStatus("all");
-    setSort("popular");
-  };
+  const reset = () => setParams(new URLSearchParams(), { replace: true });
+
+  const hasActiveFilter =
+    q ||
+    genre !== "all" ||
+    type !== "all" ||
+    status !== "all" ||
+    sort !== "popular" ||
+    day !== "all";
+
+  const dayLabel =
+    day === "all" ? null : DAYS.find((d) => d.slug === day)?.label;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10">
@@ -99,12 +127,17 @@ export default function Catalog() {
         </h1>
         <p className="mt-1 text-sm text-ink-mute">
           {filtered.length} judul ditemukan dari total {MANGA.length} series
+          {dayLabel && (
+            <span>
+              {" · "}update <span className="text-accent">{dayLabel}</span>
+            </span>
+          )}
         </p>
       </header>
 
       {/* Filter bar */}
       <div className="space-y-4 rounded-xl border border-bg-line bg-bg-card/60 p-4 md:p-5">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto]">
           <label className="relative">
             <span className="sr-only">Cari</span>
             <input
@@ -125,6 +158,14 @@ export default function Catalog() {
           </label>
           <Select value={type} onChange={setType} options={TYPES} />
           <Select value={status} onChange={setStatus} options={STATUSES} />
+          <Select
+            value={day}
+            onChange={setDay}
+            options={DAYS.map((d) => ({
+              value: d.slug,
+              label: d.slug === "all" ? "Semua hari" : d.label,
+            }))}
+          />
           <Select value={sort} onChange={setSort} options={SORTS} />
         </div>
 
@@ -152,7 +193,7 @@ export default function Catalog() {
           ))}
         </div>
 
-        {(q || genre !== "all" || type !== "all" || status !== "all" || sort !== "popular") && (
+        {hasActiveFilter && (
           <div className="flex items-center justify-between border-t border-bg-line pt-3 text-xs text-ink-mute">
             <span>
               Filter aktif. Tekan Reset untuk mengembalikan ke default.
