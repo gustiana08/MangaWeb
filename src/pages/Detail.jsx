@@ -128,7 +128,7 @@ export default function Detail() {
                     Chapter Terbaru · Ch. {lastChapter.number}
                   </Link>
                 )}
-                <BookmarkButton mangaId={manga.id} />
+                <BookmarkButton key={manga.id} mangaId={manga.id} />
               </div>
             </div>
           </div>
