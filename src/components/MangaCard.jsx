@@ -14,11 +14,11 @@ export default function MangaCard({ manga, size = "md", showRank, rank }) {
       className={`group relative block ${sizes[size]} animate-fade-in`}
     >
       <div className="relative">
-        <Cover manga={manga} showBadge showTitle={false} />
+        <Cover manga={manga} showBadge={!showRank} showTitle={false} />
 
         {showRank && (
           <div
-            className="absolute -left-1 -top-1 z-10 grid h-9 w-9 place-items-center rounded-md font-display text-lg font-extrabold text-white shadow-card"
+            className="absolute -left-2 -top-2 z-10 grid h-10 w-10 place-items-center rounded-lg font-display text-xl font-extrabold text-white shadow-card ring-2 ring-bg"
             style={{ background: manga.accent }}
           >
             {rank}
